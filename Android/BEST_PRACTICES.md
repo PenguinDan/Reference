@@ -175,3 +175,62 @@ class CustomLoader extends AsyncTaskLoader<String> {
 
 ```
 10. Perform file Operations using AsyncTask/Loader
+
+11. Handling Passwords. In the application's build.gradle, you will need to define the **signingConfigs** for the release build. <br>
+Avoid the following:
+```
+signingConfigs{
+    release {
+        //DON'T DO THIS
+        storeFile file("myapp.keystore")
+        storePassword "password123"
+        keyAlias "theKey"
+        keyPassword "password789"
+    }
+}
+```
+Make the following **gradle.properties** file which should NOT be added to the version control system
+```
+KEYSTORE_PASSWORD=password123
+KEY_PASSWORD=password789
+```
+The above file is automatically imported by Gradle, so you can use it in **build.gradle** as such:
+```
+singningConfigs {
+    release {
+        try {
+            storeFile file("myapp.keystore")
+            storePassword KEYSTORE_PASSWORD
+            keyAlias "thekey"
+            keyPassword KEY_PASSWORD
+        }catch (ex) {
+            throw new InvalidUserDataException("You should define KEYSTORE_PASSWORD and KEY_PASSWORD in gradle.properties");
+        }
+    }
+}
+```
+12. Use different package name for non-release builds.
+* use **applicationIdSuffix** for debug build type to be able to install both *debug* and *release* apk on the same device. This will be especially valuable after your application has been published.
+```
+android {
+    buildTypes {
+        debug{
+            applicationIdSuffix '.debug'
+            versionNameSuffix '-DEBUG'
+        }
+        release {
+            //...
+        }
+    }
+}
+```
+
+13. Use different icons for the debug and release builds.
+* Gradle makesthis easy, simply put *debug* icon in app/src/debug/res and *release* icon in app/src/release/res.
+
+14. Use JUnit for unit testing.
+15. Espresso for UI tests
+16. AssertJ-Android makes it easy for you to test Android specific components such as the Android Support, Google Play Services, and Appcompat libraries
+17. Data storage best practices
+* Shared Preferences for simple values and your application runs in a single process. These should not be used if your data is complex and abundant, multiple processes accessing the data, or you want a relation data structure.
+* ContentProviders are fast and process safe. You can also use the **Schematic** library to ease making the boiler plate code for ContentProvider
