@@ -56,6 +56,7 @@ assertTrue(result.equals("Hello"));
 * Called when the sequence of events associated with an Observable is complete, indicating that we should not expect any more onNext calls on our observer.
 3. OnError
 * Called when an unhandled exception is thrown during the RxJava framework code or our event handling code
+* This is called if an Exception is thrown at **ANY** time which makes Error Handling very simple. The error can just be handled at the end inside of a single function.
 ```
 // The return value for the Observables subscribe method is a subscribe interface
 String[] letters = {"a", "b", "c", "d", "e", "f", "g"};
@@ -312,3 +313,108 @@ values.subscribe(
 assertTrue(result[0].equals("MyResource"));
 ```
 
+## Schedulers
+By default, Rx is single-threaded which implies that an Observable and the chain of operatos that we can apply to it will notify its observers on the same thread on which its *subscribe()* method is called. The methods **observeOn** and **subscribeOn** take as an argument a Scheduler which is a tool that we can use for scheduling individual actions.<br>
+**Scheduling an Action**
+```
+// Schedule a job on any Scheduler by creating a new worker and scheduling some actions
+Scheduler scheduler = Schedulers.immediate();
+Scheduler.Worker worker = scheduler.createWorker();
+// Queue the action on the thread that the worker is assigned to
+wroker.schedule(() -> result += "action");
+Assert.assertTrue(result.equals("action"));
+```
+**Canceling an Action**
+```
+Scheduler scheduler = Schedulers.newThread();
+Scheduler.Worker worker = scheduler.createWorker();
+worker.schedule(() -> {
+    result += "First_Action";
+    // Cancel the action, the second worker.schedule(..) will never happen
+    worker.unsubscribe(); 
+});
+worker.schedule(() -> result += "Second_Action");
+  
+Assert.assertTrue(result.equals("First_Action"));
+```
+**Schedulers.newThread** <br>
+Start a new thread every time it is requested via **subscribeOn()** and **observeOn()**. This is hardly ever a good choice because of the latency involved when starting a new thread but also because this thread is not reused. This should be used when there are few amount of work to be done, but the job takes a long time.
+```
+Observable.just("Hello")
+    .observeOn(Schedulers.newThread())
+    .doOnNext(s -> result2 += Thread.currentThread().getName())
+    .observeOn(Schedulers.newThread())
+    .subscribe(s -> result1 += Thread.currentThread().getName());
+
+Thread.sleep(500);
+Assert.assertTrue(result1.equals("RxNewThreadScheduler-1"));
+Assert.assertTrue(result2.equals("RxNewThreadScheduler-2"));
+```
+**Schedulers.immediate**<br>
+Schedulers.immediate is a special scheduler that invokes a task within the client thread in a blocking way, rather than asynchronously and returns when the action is completed
+```
+Scheduler scheduler = Schedulers.immediate();
+Scheduler.Worker worker = scheduler.createWorker();
+worker.schedule(() -> {
+    result += Thread.currentThread().getName() +"_start";
+    worker.schedule(() -> result += "_worker_");
+    result += "_End");
+});
+Thread.sleep(500);
+Assert.assertTrue(result.equals("main_Start_worker__End"));
+```
+**Schedulers.trampoline**<br>
+While *immediate* invokes a given task right away, trampoline waits for the current task to finish
+```
+Observable.just(2,4,6,8)
+    .subscribeOn(Schedulers.trampoline())
+    .subscribe(i -> result += "" + i);
+Observable.just(1,3,5,7,9)
+    .subscribeOn(Schedulers.trampoline())
+    .subscribe(i -> result += "" + i);
+Thread.sleep(500);
+Assert.assertTrue(result.equals("246813579"));
+```
+The trampoline's worker executes every task on the thread that scheduled the first task. The first call to schedule is blocking until the queue is emptied:
+```
+Scheduler scheduler = Schedulers.trampoline();
+Scheduler.Worker worker = scheduler.createWorker();
+worker.schedule(() -> {
+    result += Thread.currentThread().getName() + "Start";
+    worker.schedule(() -> {
+        result += "_middleStart";
+        worker.schedule(() ->
+            result += "_worker_"
+        );
+        result += "_middleEnd";
+    });
+    result += "_mainEnd";
+});
+Thread.sleep(500);
+Assert.assertTrue(result.equals("mainStart_mainEnd_middleStart_middleEnd_worker_"));
+```
+**Schedulers.io**<br>
+Similar to newThread except for the fact that already started threads are recycled and can possibly handle future requests. Everytime a new worker is requested, either a new thread is started (and later kept idle for some time) or the idle one is reused.
+```
+Observable.just("io")
+    .subscribeOn(Schedulers.io())
+    .subscribe(i -> result += Thread.currentThread().getName());
+Assert.assertTrue(result.equals("RxIoScheduler-2"));
+```
+**Schedulers.computation**<br>
+Computation Scheduler by default limits the number of threads running in parallel to the value of availableProcessors(). Use computation scheduler whens tasks are entirely CPU-bound: that is, they require computation power and have no blocking code.
+```
+Observable.just("computation")
+    .subscribeOn(Schedulers.computation())
+    .subscribe(i -> result += Thread.currentThread().getName());
+Assert.assertTrue(result.equals("RxComputationScheduler-1"));
+```
+
+## Schedulers and JavaRX
+```
+myObservableServices.retrieveImage(url)
+    .subscribeOn(Schedulers.io())
+    .observeOn(AndroidSchedulers.mainThread())
+    .subscribe(bitmap -> myImageView.setImageBitmap(bitmap));
+```
+Everything that runs before the Suscriber runs on an I/O thread. Then in the end, the View manipulation happens on the main thread. With an AsyncTask or the like, I have to design my code around which parts of the code I want to run concurrently. With RxJava, the code stays the same, it just has a touch of concurrency added.
