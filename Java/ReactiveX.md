@@ -16,7 +16,7 @@ Systems must be:
 ## ReactiveX Observables
 ### What are Observables: <br>
 **Observables** 
-* Any object that can get data from a data source and whose state may be of interest in a way that other objects may regist an interest.
+* Any object that can get data from a data source and whose state may be of interest in a way that other objects may register an interest.
   
 **Observer** 
 * Any object that wishes to be notified when the state of another object changes. 
