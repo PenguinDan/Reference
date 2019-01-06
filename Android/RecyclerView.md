@@ -41,3 +41,10 @@ The views in the list are represented by **view holder** objects. These objects 
 
 **The View Manager** <br>
 The **view holder** objects are managed by an adapter which you create by extending **RecyclerView.Adapter**. The adapter creates **view holders** as needed. The adapter also binds the view holders to their data. It does this by assigning the view holder to a position, and calling the adapter's **onBindViewHolder()** method.
+
+## Efficient RecyclerView Reloading
+The **notifyDataSetChanged(..)** method on your Adapter is a handy way to ask the RecyclerView to
+reload all of the items that are currently visible.<br>
+The use of this method is wildly inefficient because at most one item may have changed. <br>
+Use the RecyclerView.Adapter’s notifyItemChanged(int) method to reload a single item in the
+list.
