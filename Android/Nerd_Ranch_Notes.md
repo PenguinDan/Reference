@@ -52,6 +52,13 @@ public void onCreate(Bundle savedInstanceState) {
 }
 ```
 
+## Retaining Data for a Fragment
+Retained fragments take advantage of the fact that a Fragment's View can be destroyed and re-created without having to destroy the fragment itself.
+1. During a configuration change, the **FragmentManager** first destroys the views of the fragments in its list
+2. **FragmentManager** checks the **retainInstace** property of each fragment.
+   * If it is false (default), then the **FragmentManager** destroys the fragment instance. The fragment and its view will be re-created by the new **FragmentManager** of the new activity
+   * If it is true, then the fragment's view is destroyed bu the fragment itself is not. When the new activity is created, the **FragmentManager** finds the retained fragment and re-creates its view. A retained fragment is not destroyed, but it is *detached* from the dying activity.
+
 ## Using ViewPager
 Adding a **ViewPager** to the UI allows users to navigate between list items by swiping accross the screen to "page" forward or backward through the items.
 
@@ -322,6 +329,15 @@ With Data Binding, you can declare data objects within your layout file:
         android:checked="@{crime.isSolved()}"
         android:padding="4dp"/>
 </layout>
+```
+**Syntatic Sugar**
+```
+<Button
+    android:layout_width="match_parent"
+    android:layout_height="120dp"
+    android:text="@{`File name: ` + viewModel.title ?? `No file`}"
+    android:onClick="@{(view) -> viewModel.onButtonClick()}">
+    tools:text="Sound name"/>
 ```
 
 ## MVVM
