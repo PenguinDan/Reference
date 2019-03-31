@@ -7,7 +7,7 @@ A general purpose container that allows for coordinating interactive behaviors b
 * As a container for a specific interaction with one or more child views
 
 ## AppBarLayout
-Children are places vertically, with certain parameters the children can manage their behavior when the content is scrolled. The real power of an AppbarLayout is caused by the proper management of the different scroll flags in their views.
+Children are placed vertically, with certain parameters the children can manage their behavior when the content is scrolled. The real power of an AppbarLayout is caused by the proper management of the different scroll flags in their views.
 
 We can manage the behavior of direct childs in an AppbarLayout with the parameter: **layout_scrollFlags**. 
 
