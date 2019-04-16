@@ -156,3 +156,80 @@ val result = withTimeoutOrNull(1300L) {
 }
 println("Result is $result")
 ```
+
+## Channels
+```
+val channel = Channel<Int> ()
+launch {
+    for(x in 1..5) channel.send(x * x)
+}
+
+// Blocks
+repeat(5) {println(channel.receive())}
+println("Done!")
+```
+
+**Closing Channels**
+```
+val channel = Channel<Int>() 
+launch {
+    for(x in 1..5) channel.send(x * x)
+    channel.close()
+}
+
+for(y in channel) println(y)
+println("Done!")
+```
+
+**Building Channel Producers**
+```
+fun CoroutineScope.produceSquares() : ReceiveChannel<Int> = produce {
+    for(x in 1..5) send(x * x)
+}
+
+val squares = produceSquares()
+squares.consumeEach { println(it) }
+println("Done!")
+```
+
+## Pipelining
+A pattern in which a coroutine is producing a stream of values and another coroutine consume the stream, do some processing, and produce more results. 
+```
+fun CoroutineScope.produceNumbers() = produce<Int> {
+    var x = 1
+    while(true) send(x++)
+}
+
+fun CoroutineScope.square(numbers: ReceiveChannel<Int>): ReceiveChannel<Int> = produce {
+    for (x in numbers) send(x * x)
+}
+
+val numbers = produceNumbers()
+val squares = square(numbers)
+for(i in 1..5) println(squares.receive())
+println("Done!")
+coroutineContext.cancelChildren()
+```
+
+## Fan Out
+Multiple coroutines may receive from the same channel, distributing work between themselves. 
+```
+fun CoroutineScope.produceNumbers() = produce<Int> {
+    var x = 1
+    while (true) {
+        send(x++)
+        delay(100)
+    }
+}
+
+fun CoroutineScope.launchProcessor(id: Int, channel: ReceiveChannel<Int>) = launch {
+    for(msg in channel) {
+        println("Processor #$id received $msg")
+    }
+}
+
+val producer = produceNumbers()
+repeat(5) { launchProcessor(it, producer) }
+delay(950)
+producer.cancel()
+```
